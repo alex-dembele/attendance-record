@@ -1,0 +1,31 @@
+# Core FastAPI
+fastapi
+uvicorn[standard]
+
+# Database
+sqlalchemy
+psycopg2-binary
+alembic
+sqlalchemy-utils
+
+# Config
+python-dotenv
+pydantic-settings
+
+# Security
+passlib
+bcrypt>=4.0.0
+python-jose[cryptography]
+
+# Schemas
+pydantic[email]
+
+# API Authentication
+python-multipart
+
+# File Processing
+pandas
+openpyxl
+
+# Background Tasks
+celery[redis]
