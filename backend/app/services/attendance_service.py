@@ -14,6 +14,8 @@ from app.models.user_management import User
 from app.schemas.leave_request import LeaveRequestCreate
 from app.models.attendance import AppParameter
 from typing import Dict, Any
+from app.schemas.dashboard import KpiData, TopLateEmployee, DashboardData
+from sqlalchemy import extract
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -206,3 +208,41 @@ def update_parameters(db: Session, params_to_update: Dict[str, Any]):
 
 def get_all_leave_requests(db: Session, skip: int = 0, limit: int = 100) -> List[LeaveRequest]:
     return db.query(LeaveRequest).order_by(LeaveRequest.created_at.desc()).offset(skip).limit(limit).all()
+
+def get_dashboard_data(db: Session) -> DashboardData:
+    today = datetime.date.today()
+    start_of_month = today.replace(day=1)
+    start_of_week = today - datetime.timedelta(days=today.weekday())
+
+    # KPI 1: Taux de présence (30 derniers jours)
+    thirty_days_ago = today - datetime.timedelta(days=30)
+    total_sessions = db.query(WorkSession).filter(WorkSession.session_date >= thirty_days_ago).count()
+    present_sessions = db.query(WorkSession).filter(WorkSession.session_date >= thirty_days_ago, WorkSession.status != 'ABSENT').count()
+    attendance_rate = (present_sessions / total_sessions) * 100 if total_sessions > 0 else 100
+
+    # KPI 2: Heures Supp. (Mois) - Placeholder
+    overtime_hours_month = 0 # La logique d'heures supp n'est pas encore implémentée
+
+    # KPI 3: Alertes de Retard (Semaine)
+    late_alerts_week = db.query(WorkSession).filter(WorkSession.session_date >= start_of_week, WorkSession.status == 'LATE').count()
+
+    kpis = KpiData(
+        attendance_rate=round(attendance_rate, 1),
+        overtime_hours_month=overtime_hours_month,
+        late_alerts_week=late_alerts_week
+    )
+
+    # Top 5 des employés en retard ce mois-ci
+    top_late_employees_query = db.query(
+        Employee.first_name,
+        Employee.last_name,
+        func.count(WorkSession.id).label("late_count")
+    ).join(Employee).filter(
+        WorkSession.status == 'LATE',
+        extract('month', WorkSession.session_date) == today.month,
+        extract('year', WorkSession.session_date) == today.year
+    ).group_by(Employee.id).order_by(func.count(WorkSession.id).desc()).limit(5).all()
+
+    top_late_employees = [TopLateEmployee(first_name=r.first_name, last_name=r.last_name, late_count=r.late_count) for r in top_late_employees_query]
+
+    return DashboardData(kpis=kpis, top_late_employees=top_late_employees)
