@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>Rapport Hebdomadaire des Présences</title></head>
+<body>
+    <h2>Rapport du {{ start_date }} au {{ end_date }}</h2>
+    <p>Bonjour,</p>
+    <p>Voici le résumé de l'activité de la semaine passée :</p>
+    <ul>
+        <li><strong>Employés présents (au moins 1 jour) :</strong> {{ summary.present_employees }}</li>
+        <li><strong>Total des retards :</strong> {{ summary.total_lates }}</li>
+        <li><strong>Total des absences :</strong> {{ summary.total_absents }}</li>
+    </ul>
+    <p>Cordialement,<br>Système Attendance-record</p>
+</body>
+</html>

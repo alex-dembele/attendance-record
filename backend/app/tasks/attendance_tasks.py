@@ -8,6 +8,10 @@ from app.models.attendance import AttendanceEntry, AttendanceRawImport
 from app.models.organization import Employee
 from app.services.attendance_service import upsert_work_sessions
 from app.worker import celery_app
+import datetime
+from jinja2 import Environment, FileSystemLoader
+from app.core.email import send_email
+from app.core.config import settings
 from sqlalchemy.orm import Session
 
 # Configurer un logger pour de meilleurs messages
@@ -150,5 +154,38 @@ def calculate_work_sessions_task(
         logger.error(
             f"Erreur lors du calcul des sessions de travail : {e}", exc_info=True
         )
+    finally:
+        db.close()
+
+
+@celery_app.task
+def send_weekly_attendance_report():
+    """
+    Génère et envoie le rapport de présence hebdomadaire.
+    """
+    db = get_db_session()
+    try:
+        today = datetime.date.today()
+        start_of_week = today - datetime.timedelta(days=today.weekday() + 7)
+        end_of_week = start_of_week + datetime.timedelta(days=6)
+
+        summary_data = db.query(
+            func.count(func.distinct(WorkSession.employee_id)).label("present_employees"),
+            func.sum(case((WorkSession.status == 'LATE', 1), else_=0)).label("total_lates"),
+            func.sum(case((WorkSession.status == 'ABSENT', 1), else_=0)).label("total_absents")
+        ).filter(WorkSession.session_date.between(start_of_week, end_of_week)).one()
+
+        # Rendu du template
+        env = Environment(loader=FileSystemLoader('app/templates/'))
+        template = env.get_template('email/weekly_report.html')
+        html_content = template.render(
+            start_date=start_of_week.strftime('%d/%m/%Y'),
+            end_date=end_of_week.strftime('%d/%m/%Y'),
+            summary=summary_data
+        )
+
+        # Envoi de l'email
+        send_email(to=settings.EMAILS_TO_RH, subject="Rapport Hebdomadaire des Présences", html_content=html_content)
+        logger.info(f"Rapport hebdomadaire envoyé à {settings.EMAILS_TO_RH}")
     finally:
         db.close()

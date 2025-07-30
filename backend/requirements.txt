@@ -30,3 +30,6 @@ openpyxl
 
 # Background Tasks
 celery[redis]
+
+Jinja2
+
