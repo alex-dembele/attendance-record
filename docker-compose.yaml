@@ -4,38 +4,74 @@ version: '3.8'
 services:
   db:
     image: postgres:16-alpine
-    container_name: attendance_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=attendance_db
     ports:
-      - "5434:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d attendance_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "5432:5432"
 
   redis:
     image: redis:7-alpine
-    container_name: attendance_redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   mailhog:
     image: mailhog/mailhog
-    container_name: attendance_mailhog
     ports:
-      - "1025:1025" # Port SMTP
-      - "8025:8025" # Interface web
+      - "1025:1025"
+      - "8025:8025"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    volumes:
+      - ./backend/app:/app/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker # Utilise la même image que le worker
+    command: celery -A app.worker beat -l INFO
+    volumes:
+      - ./backend/app:/app/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
 
 volumes:
   postgres_data:
