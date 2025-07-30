@@ -5,6 +5,7 @@ import api from '@/lib/api';
 
 // Définir le type pour les informations utilisateur
 interface UserProfile {
+  id: string;
   email: string;
   role: { name: string };
 }

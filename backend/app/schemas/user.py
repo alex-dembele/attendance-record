@@ -2,7 +2,6 @@
 import uuid
 from pydantic import BaseModel, EmailStr
 
-# Schéma pour inclure les informations du rôle
 class Role(BaseModel):
     name: str
     class Config:
@@ -11,10 +10,15 @@ class Role(BaseModel):
 class UserBase(BaseModel):
     email: EmailStr
 
-class User(UserBase):
+# Schéma pour la création d'un utilisateur
+class UserCreate(UserBase):
+    password: str
+    role_name: str # On passera 'ADMIN', 'RH', ou 'EMPLOYEE'
+
+# Schéma pour lire les informations d'un utilisateur
+class UserRead(UserBase):
     id: uuid.UUID
     is_active: bool
-    role: Role  # <-- LA LIGNE CRUCIALE QUI A ÉTÉ AJOUTÉE
-
+    role: Role
     class Config:
         from_attributes = True
