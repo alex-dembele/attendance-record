@@ -2,19 +2,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 import { motion } from 'framer-motion';
-// Vous pouvez créer un composant AllRequestsList similaire à PendingRequestsList
-// Pour la simplicité, nous mettons la logique ici.
+import AllRequestsList from '@/components/leaves/AllRequestsList';
 
 export default function HistoryPage() {
   const [requests, setRequests] = useState([]);
-  useEffect(() => {
-    api.get('/leaves/all').then(res => setRequests(res.data));
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.get('/leaves/all');
+      setRequests(response.data);
+    } catch (error) {
+      console.error("Failed to fetch history", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   return (
     <div className="p-4 md:p-8 h-full">
-      <motion.h1 /* ... */>Historique des Permissions</motion.h1>
-      {/* Affichez la liste des 'requests' ici, similaire à la page de gestion */}
+      <motion.h1 
+        className="text-3xl md:text-4xl font-bold text-white mb-8"
+        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+      >
+        Historique des Permissions
+      </motion.h1>
+
+      {isLoading ? <p className="text-center">Chargement...</p> : <AllRequestsList requests={requests} />}
     </div>
   );
 }

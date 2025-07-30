@@ -1,6 +1,6 @@
-// Fichier: frontend/src/app/(app)/settings/page.tsx
 "use client";
 import { motion } from 'framer-motion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SettingsForm from '@/components/settings/SettingsForm';
 import UserManagement from '@/components/settings/UserManagement';
 
@@ -15,8 +15,18 @@ export default function SettingsPage() {
         Centre de Contrôle
       </motion.h1>
 
-      <SettingsForm />
-      <UserManagement />
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-slate-800/80">
+          <TabsTrigger value="general">Paramètres Généraux</TabsTrigger>
+          <TabsTrigger value="users">Gestion des Utilisateurs</TabsTrigger>
+        </TabsList>
+        <TabsContent value="general">
+          <SettingsForm />
+        </TabsContent>
+        <TabsContent value="users">
+          <UserManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

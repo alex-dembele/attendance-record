@@ -1,6 +1,7 @@
 # Fichier: backend/app/api/v1/endpoints/users.py
-from fastapi import APIRouter, Depends, HTTPException, status
+
 import uuid
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -45,24 +46,22 @@ def create_user(
 
     return crud_user.create_user(db=db, user=user_in)
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{user_id}", response_model=UserRead)
 def delete_user(
     user_id: uuid.UUID,
     db: Session = Depends(deps.get_db),
     current_user: UserModel = Depends(deps.get_current_user)
 ):
-    """
-    Delete a user (Admin only).
-    """
+    """Delete a user (Admin only)."""
     if current_user.role.name != "ADMIN":
         raise HTTPException(status_code=403, detail="Not enough permissions")
-
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Admins cannot delete themselves")
 
-    user_to_delete = crud_user.get_user_by_id(db, user_id=user_id)
-    if not user_to_delete:
+    # --- LA CORRECTION EST ICI ---
+    # On appelle directement la fonction delete_user du CRUD
+    user = crud_user.delete_user(db=db, user_id=user_id)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    crud_user.delete_user(db, user_to_delete=user_to_delete)
-    return {"ok": True} # Ce message ne sera pas envoyé à cause du statut 204
+    return user
