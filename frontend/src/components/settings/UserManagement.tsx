@@ -1,30 +1,42 @@
 "use client";
+
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 import { UserPlus, Trash2 } from 'lucide-react';
 import { toast } from "sonner";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-// Définir un type pour les données utilisateur pour plus de clarté
 type User = {
   id: string;
   email: string;
-  role: {
-    name: string;
-  };
+  role: { name: string };
 };
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // State for the creation form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('EMPLOYEE');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
 
-  const fetchUsers = useCallback(() => {
-    api.get('/users/').then(res => {
-      setUsers(res.data);
-    }).catch(err => console.error("Failed to fetch users", err));
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await api.get('/users/');
+      setUsers(response.data);
+    } catch (error) {
+      toast.error("Erreur lors de la récupération des utilisateurs.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -33,80 +45,124 @@ export default function UserManagement() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
+    const userData = {
       email,
       password,
       role_name: role,
-      first_name: role === 'EMPLOYEE' ? firstName : undefined,
-      last_name: role === 'EMPLOYEE' ? lastName : undefined,
+      first_name: firstName,
+      last_name: lastName,
     };
+
     try {
-      await api.post('/users/', payload);
+      const response = await api.post('/users/', userData);
+      const newUser = response.data;
+      
+      setUsers(currentUsers => [newUser, ...currentUsers]);
       toast.success("Utilisateur créé avec succès !");
-      // Réinitialiser le formulaire
+
+      // Reset form
       setEmail('');
       setPassword('');
       setFirstName('');
       setLastName('');
-      fetchUsers(); // Rafraîchir la liste
+      setRole('EMPLOYEE');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || "L'email existe peut-être déjà.";
-      toast.error(`Erreur: ${errorMessage}`);
+      toast.error(error.response?.data?.detail || "Erreur: L'email existe peut-être déjà.");
     }
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.")) {
       try {
         await api.delete(`/users/${userId}`);
+        setUsers(currentUsers => currentUsers.filter(user => user.id !== userId));
         toast.success("Utilisateur supprimé avec succès.");
-        fetchUsers(); // Rafraîchir la liste
       } catch (error: any) {
-        const errorMessage = error.response?.data?.detail || "Impossible de supprimer cet utilisateur.";
-        toast.error(`Erreur: ${errorMessage}`);
+        toast.error(error.response?.data?.detail || "Impossible de supprimer l'utilisateur.");
       }
     }
   };
 
   return (
-    <div className="p-6 mt-8 bg-glass-dark border border-white/10 rounded-2xl shadow-lg backdrop-blur-xl">
-      <h2 className="text-xl font-semibold text-white mb-4">Gestion des Utilisateurs</h2>
-      
-      {/* Formulaire de création */}
-      <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end mb-8">
-        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" required className="input-glass" />
-        <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Mot de passe" type="password" required className="input-glass" />
-        <select value={role} onChange={e => setRole(e.target.value)} className="input-glass">
-          <option>EMPLOYEE</option>
-          <option>RH</option>
-          <option>ADMIN</option>
-        </select>
-        {role === 'EMPLOYEE' && (
-          <>
-            <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Prénom" type="text" required className="input-glass" />
-            <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Nom" type="text" required className="input-glass" />
-          </>
-        )}
-        <button type="submit" className="flex items-center justify-center py-2 px-4 rounded-md text-white bg-primary-blue hover:opacity-90 h-10 md:col-start-5">
-          <UserPlus className="w-4 h-4 mr-2" /> Créer
-        </button>
-      </form>
-
-      {/* Liste des utilisateurs */}
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-white/90 border-b border-white/10 pb-2 mb-4">Utilisateurs Existants</h3>
-        {users.map(user => (
-          <div key={user.id} className="flex justify-between items-center p-2 bg-slate-700/50 rounded hover:bg-slate-700/80 transition-colors">
-            <div>
-              <span className="text-white">{user.email}</span>
-              <span className="ml-4 px-2 py-1 text-xs text-sky-300 bg-sky-500/20 rounded-full">{user.role.name}</span>
+    <Card className="mt-8 bg-glass-dark border-white/10 backdrop-blur-xl">
+      <CardHeader>
+        <CardTitle className="text-white">Gestion des Utilisateurs</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* --- Formulaire de création --- */}
+        <form onSubmit={handleCreateUser} className="space-y-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" type="email" required />
             </div>
-            <button onClick={() => handleDelete(user.id)} className="p-1 text-red-400 hover:text-red-300 transition-colors" aria-label="Supprimer l'utilisateur">
-              <Trash2 size={16} />
-            </button>
+            <div className="space-y-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <Input id="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mot de passe" type="password" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Rôle</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Sélectionner un rôle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EMPLOYEE">Employé</SelectItem>
+                  <SelectItem value="RH">RH</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
+
+          {role === 'EMPLOYEE' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Prénom</Label>
+                <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Prénom" type="text" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Nom</Label>
+                <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Nom de famille" type="text" required />
+              </div>
+            </div>
+          )}
+          
+          <Button type="submit" className="w-full md:w-auto">
+            <UserPlus className="w-4 h-4 mr-2" /> Créer l'utilisateur
+          </Button>
+        </form>
+
+        {/* --- Liste des utilisateurs --- */}
+        <Table>
+          <TableHeader>
+            <TableRow className="border-slate-700 hover:bg-transparent">
+              <TableHead className="text-white">Email</TableHead>
+              <TableHead className="text-white">Rôle</TableHead>
+              <TableHead className="text-right text-white">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow><TableCell colSpan={3} className="text-center">Chargement...</TableCell></TableRow>
+            ) : (
+              users.map(user => (
+                <TableRow key={user.id} className="border-slate-800">
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <span className="px-2 py-1 text-xs text-sky-300 bg-sky-500/20 rounded-full">{user.role.name}</span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)}>
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
