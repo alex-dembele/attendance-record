@@ -86,3 +86,12 @@ def reject_request(
         raise HTTPException(status_code=404, detail="Demande non trouvée ou déjà traitée.")
     
     return attendance_service.reject_leave_request(db, db_request, current_user)
+
+@router.get("/all", response_model=List[LeaveRequestRead])
+def get_all_requests(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    if current_user.role.name not in ["ADMIN", "RH"]:
+        raise HTTPException(status_code=403, detail="Accès non autorisé.")
+    return attendance_service.get_all_leave_requests(db)

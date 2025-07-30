@@ -203,3 +203,6 @@ def update_parameters(db: Session, params_to_update: Dict[str, Any]):
             param.value = value
     db.commit()
     return get_all_parameters(db)
+
+def get_all_leave_requests(db: Session, skip: int = 0, limit: int = 100) -> List[LeaveRequest]:
+    return db.query(LeaveRequest).order_by(LeaveRequest.created_at.desc()).offset(skip).limit(limit).all()

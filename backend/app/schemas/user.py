@@ -13,7 +13,9 @@ class UserBase(BaseModel):
 # Schéma pour la création d'un utilisateur
 class UserCreate(UserBase):
     password: str
-    role_name: str # On passera 'ADMIN', 'RH', ou 'EMPLOYEE'
+    role_name: str
+    first_name: str | None = None 
+    last_name: str | None = None  
 
 # Schéma pour lire les informations d'un utilisateur
 class UserRead(UserBase):

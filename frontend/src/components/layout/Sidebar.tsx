@@ -15,8 +15,10 @@ const Sidebar = () => {
     { href: '/reports', label: 'Rapports', icon: FileText, roles: ['ADMIN', 'RH'] },
     { href: '/upload', label: 'Upload', icon: UploadCloud, roles: ['ADMIN'] },
     { href: '/leaves', label: 'Mes Permissions', icon: CalendarCheck, roles: ['EMPLOYEE'] },
-    { href: '/leaves/manage', label: 'Gérer Permissions', icon: ShieldCheck, roles: ['ADMIN', 'RH'] },
+    { href: '/leaves/manage', label: 'Gérer Permissions', icon: ShieldCheck, roles: ['ADMIN', 'RH'] },    
+    { href: '/leaves/history', label: 'Historique Permissions', icon: FileText , roles: ['ADMIN', 'RH'] },
     { href: '/settings', label: 'Paramètres', icon: Settings, roles: ['ADMIN'] },
+
   ];
 
   return (

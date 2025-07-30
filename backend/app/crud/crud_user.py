@@ -28,6 +28,16 @@ def create_user(db: Session, user: UserCreate) -> User:
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    if user.role_name.upper() == 'EMPLOYEE':
+        employee_id_num = db.query(User).count() + 100 # Génère un ID matricule simple
+        db_employee = Employee(
+            user_id=db_user.id,
+            employee_id=str(employee_id_num),
+            first_name=user.first_name or user.email.split('@')[0],
+            last_name=user.last_name or ''
+        )
+        db.add(db_employee)
+        db.commit()
     return db_user
 
 def get_user_by_id(db: Session, user_id: uuid.UUID) -> User | None:
