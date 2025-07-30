@@ -12,6 +12,7 @@ from app.models.user_management import User
 from app.schemas.work_session import WorkSessionReport
 from app.services import attendance_service
 from app.tasks.attendance_tasks import process_attendance_file
+from app.schemas.import_history import ImportHistoryItem
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -91,3 +92,19 @@ def get_attendance_reports(
         limit=limit,
     )
     return sessions
+
+@router.get("/imports", response_model=List[ImportHistoryItem])
+def get_imports_history(
+    skip: int = 0,
+    limit: int = 25,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Récupère l'historique des imports. Accessible aux Admins.
+    """
+    if current_user.role.name != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès non autorisé.")
+
+    history = attendance_service.get_import_history(db=db, skip=skip, limit=limit)
+    return history

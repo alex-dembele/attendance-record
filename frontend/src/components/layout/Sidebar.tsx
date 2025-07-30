@@ -3,6 +3,7 @@ import { LogOut, LayoutDashboard, FileText } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UploadCloud } from "lucide-react";
 
 const Sidebar = () => {
   const logout = useAuthStore((state) => state.logout);
@@ -10,6 +11,7 @@ const Sidebar = () => {
   const navLinks = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/reports', label: 'Rapports', icon: FileText },
+    { href: '/upload', label: 'Upload', icon: UploadCloud },
   ];
 
   return (

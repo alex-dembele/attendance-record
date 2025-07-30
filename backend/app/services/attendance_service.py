@@ -8,6 +8,7 @@ import pandas as pd
 import sqlalchemy as sa
 from app.models.attendance import AttendanceEntry, WorkSession
 from app.models.organization import Department, Employee
+from app.models.attendance import AttendanceRawImport
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -127,3 +128,9 @@ def get_work_sessions(
     return (
         query.order_by(WorkSession.session_date.desc()).offset(skip).limit(limit).all()
     )
+
+def get_import_history(db: Session, skip: int = 0, limit: int = 100) -> List[AttendanceRawImport]:
+    """
+    Récupère l'historique des fichiers importés.
+    """
+    return db.query(AttendanceRawImport).order_by(AttendanceRawImport.uploaded_at.desc()).offset(skip).limit(limit).all()
