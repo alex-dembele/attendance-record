@@ -1,19 +1,17 @@
-/* Fichier: frontend/src/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+/* Fichier: frontend/src/app/globals.css */
+
+@layer utilities {
+  .aurora-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    background-image: radial-gradient(ellipse 80% 80% at 50% -20%,rgba(0,123,255,0.3), rgba(255,255,255,0));
   }
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-  }
-}
-body {
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
 }

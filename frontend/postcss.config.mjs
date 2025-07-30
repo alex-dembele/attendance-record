@@ -1,4 +1,3 @@
-// Fichier: frontend/postcss.config.mjs
 /** @type {import('postcss-load-config').Config} */
 const config = {
   plugins: {
@@ -6,5 +5,4 @@ const config = {
     autoprefixer: {},
   },
 };
-
 export default config;
