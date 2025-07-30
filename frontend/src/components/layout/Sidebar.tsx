@@ -4,6 +4,8 @@ import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UploadCloud } from "lucide-react";
+import { /*...,*/ CalendarCheck } from 'lucide-react';
+
 
 const Sidebar = () => {
   const logout = useAuthStore((state) => state.logout);
@@ -12,6 +14,7 @@ const Sidebar = () => {
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/reports', label: 'Rapports', icon: FileText },
     { href: '/upload', label: 'Upload', icon: UploadCloud },
+    { href: '/leaves', label: 'Permissions', icon: CalendarCheck },
   ];
 
   return (

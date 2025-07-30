@@ -188,3 +188,5 @@ def reject_leave_request(db: Session, db_request: LeaveRequest, approver: User) 
     db.refresh(db_request)
     return db_request
 
+def get_requests_for_employee(db: Session, employee_id: uuid.UUID) -> List[LeaveRequest]:
+    return db.query(LeaveRequest).filter(LeaveRequest.employee_id == employee_id).order_by(LeaveRequest.start_date.desc()).all()
