@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  
-from app.api.v1.endpoints import login, users, attendance, leaves
+from app.api.v1.endpoints import login, users, attendance, leaves, settings
 
 app = FastAPI(title="Attendance-record API")
 
@@ -27,6 +27,8 @@ app.include_router(login.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(attendance.router, prefix="/api/v1/attendance", tags=["Attendance"])
 app.include_router(leaves.router, prefix="/api/v1/leaves", tags=["Leaves"])
+app.include_router(settings.router, prefix="/api/v1/settings", tags=["Settings"])
+
 
 
 @app.get("/")

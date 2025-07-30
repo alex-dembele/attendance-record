@@ -8,10 +8,11 @@ from app.core.security import get_password_hash
 from app.db.base import SessionLocal
 from app.models.user_management import User, Role
 from app.models.organization import Employee
+from app.models.attendance import AppParameter
 
 def seed_db(db: Session):
     """
-    Peuple la base de données avec les données initiales (rôles, utilisateurs, employés).
+    Peuple la base de données avec les données initiales (rôles, utilisateurs, employés, paramètres).
     """
     print("Seeding database roles...")
     # Créer les rôles
@@ -51,7 +52,7 @@ def seed_db(db: Session):
 
     print("Seeding RH user...")
     # Créer un utilisateur RH de test
-    rh_user_email = "rh@nexah.net"
+    rh_user_email = "rh@example.com"
     rh_user = db.query(User).filter(User.email == rh_user_email).first()
     if not rh_user:
         hashed_password = get_password_hash("rh_password")
@@ -117,6 +118,20 @@ def seed_db(db: Session):
             print("Employee user already exists.")
     else:
         print("Could not find employee with ID '30' to link user account.")
+
+    print("Seeding app parameters...")
+    default_params = {
+        "LATE_TOLERANCE_MINUTES": {"value": 10, "description": "Tolérance de retard en minutes"},
+        "DEFAULT_SCHEDULE_START": {"value": "08:30:00", "description": "Heure de début de travail par défaut"},
+        "DEFAULT_SCHEDULE_END": {"value": "17:30:00", "description": "Heure de fin de travail par défaut"}
+    }
+    for key, data in default_params.items():
+        param = db.query(AppParameter).filter(AppParameter.key == key).first()
+        if not param:
+            db_param = AppParameter(key=key, value=data['value'], description=data['description'])
+            db.add(db_param)
+    db.commit()
+    print("App parameters seeded.")
 
 
 if __name__ == "__main__":

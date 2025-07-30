@@ -12,6 +12,8 @@ from app.models.attendance import AttendanceRawImport
 from app.models.attendance import LeaveRequest
 from app.models.user_management import User
 from app.schemas.leave_request import LeaveRequestCreate
+from app.models.attendance import AppParameter
+from typing import Dict, Any
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -190,3 +192,14 @@ def reject_leave_request(db: Session, db_request: LeaveRequest, approver: User) 
 
 def get_requests_for_employee(db: Session, employee_id: uuid.UUID) -> List[LeaveRequest]:
     return db.query(LeaveRequest).filter(LeaveRequest.employee_id == employee_id).order_by(LeaveRequest.start_date.desc()).all()
+
+def get_all_parameters(db: Session) -> List[AppParameter]:
+    return db.query(AppParameter).all()
+
+def update_parameters(db: Session, params_to_update: Dict[str, Any]):
+    for key, value in params_to_update.items():
+        param = db.query(AppParameter).filter(AppParameter.key == key).first()
+        if param:
+            param.value = value
+    db.commit()
+    return get_all_parameters(db)
