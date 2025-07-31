@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { Download } from 'lucide-react';
+import { saveAs } from 'file-saver';
+import { toast } from "sonner";
 import api from '@/lib/api';
 
 // Importer les composants shadcn/ui
@@ -9,13 +12,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button';
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 
 // Définir un type pour les données de session
 type WorkSession = {
   session_date: string;
-  status: 'ON_TIME' | 'LATE' | 'ABSENT' | 'ON_LEAVE';
+  status: string;
   check_in: string | null;
   check_out: string | null;
   worked_hours_seconds: number;
@@ -27,7 +31,7 @@ type WorkSession = {
   };
 };
 
-// Fonctions d'aide pour le formatage
+// Fonctions d'aide
 const getDefaultDateRange = () => {
   const today = new Date();
   const dayOfWeek = today.getDay();
@@ -51,49 +55,44 @@ const formatDuration = (seconds: number) => {
   return `${h}h ${m.toString().padStart(2, '0')}m`;
 };
 
-const statusStyles: { [key: string]: string } = {
-  ON_TIME: 'text-green-400',
-  LATE: 'text-yellow-400',
-  ABSENT: 'text-red-400',
-  ON_LEAVE: 'text-blue-400',
-};
-
 
 export default function ReportsPage() {
   const [sessions, setSessions] = useState<WorkSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [filters, setFilters] = useState(getDefaultDateRange());
 
   const fetchReports = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
     try {
-      const params = new URLSearchParams({
-        start_date: filters.startDate,
-        end_date: filters.endDate,
-        limit: '100',
-      });
+      const params = new URLSearchParams({ start_date: filters.startDate, end_date: filters.endDate, limit: '100' });
       const response = await api.get(`/attendance/reports?${params.toString()}`);
       setSessions(response.data);
     } catch (err) {
-      setError("Erreur lors de la récupération des rapports.");
-      console.error(err);
+      toast.error("Erreur lors de la récupération des rapports.");
     } finally {
       setIsLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
-    // Ajout d'un debounce pour éviter les appels API trop fréquents lors de la saisie
-    const handler = setTimeout(() => {
-      fetchReports();
-    }, 500);
-    return () => clearTimeout(handler);
+    fetchReports();
   }, [fetchReports]);
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters(prevFilters => ({ ...prevFilters, [e.target.name]: e.target.value }));
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+        const params = new URLSearchParams({ start_date: filters.startDate, end_date: filters.endDate });
+        const response = await api.get(`/attendance/reports/export?${params.toString()}`, {
+            responseType: 'blob',
+        });
+        saveAs(response.data, `rapport_presence_${filters.startDate}_au_${filters.endDate}.csv`);
+        toast.success("Exportation réussie !");
+    } catch (error) {
+        toast.error("Erreur lors de l'export.");
+    } finally {
+        setIsExporting(false);
+    }
   };
 
   return (
@@ -102,28 +101,31 @@ export default function ReportsPage() {
         className="text-3xl md:text-4xl font-bold text-white mb-8"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
       >
         Rapports de Présence
       </motion.h1>
 
       <Card className="bg-glass-dark border-white/10 backdrop-blur-xl text-white mb-8">
-        <CardHeader><CardTitle>Filtres</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Filtres</CardTitle>
+          <Button onClick={handleExport} disabled={isExporting}>
+            <Download className="w-4 h-4 mr-2" />
+            {isExporting ? "Export..." : "Exporter en CSV"}
+          </Button>
+        </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startDate" className="text-slate-300">Date de début</Label>
-              <Input type="date" name="startDate" id="startDate" value={filters.startDate} onChange={handleFilterChange} />
+              <Input type="date" name="startDate" id="startDate" value={filters.startDate} onChange={(e) => setFilters(f => ({...f, startDate: e.target.value}))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="endDate" className="text-slate-300">Date de fin</Label>
-              <Input type="date" name="endDate" id="endDate" value={filters.endDate} onChange={handleFilterChange} />
+              <Input type="date" name="endDate" id="endDate" value={filters.endDate} onChange={(e) => setFilters(f => ({...f, endDate: e.target.value}))} />
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {error && <p className="text-center text-red-400 p-4">{error}</p>}
 
       <Card className="bg-glass-dark border-white/10 backdrop-blur-xl">
         <CardContent className="p-0">
@@ -140,39 +142,29 @@ export default function ReportsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                // Squelette de chargement
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index} className="border-slate-800">
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="border-slate-800">
+                    <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
                   </TableRow>
                 ))
               ) : sessions.length === 0 ? (
-                // État vide
                 <TableRow>
                   <TableCell colSpan={6}>
                     <EmptyState 
                       title="Aucun rapport trouvé" 
-                      description="Modifiez les filtres ou importez un fichier pour voir des données ici." 
+                      description="Modifiez les filtres ou importez un fichier pour voir des données." 
                     />
                   </TableCell>
                 </TableRow>
               ) : (
-                // Données affichées
                 sessions.map((session, index) => (
                   <TableRow key={index} className="border-slate-800 text-slate-300">
                     <TableCell className="font-medium text-white">{session.employee.first_name} {session.employee.last_name}</TableCell>
                     <TableCell>{new Date(session.session_date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>
-                      <span className={statusStyles[session.status] || 'text-slate-400'}>{session.status}</span>
-                    </TableCell>
+                    <TableCell>{session.status}</TableCell>
                     <TableCell>{formatTime(session.check_in)}</TableCell>
                     <TableCell>{formatTime(session.check_out)}</TableCell>
-                    <TableCell className="text-right font-mono">{formatDuration(session.worked_hours_seconds)}</TableCell>
+                    <TableCell className="text-right">{formatDuration(session.worked_hours_seconds)}</TableCell>
                   </TableRow>
                 ))
               )}

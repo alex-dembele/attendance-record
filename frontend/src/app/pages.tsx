@@ -1,103 +1,121 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Users, Clock, AlertTriangle } from 'lucide-react';
+import api from '@/lib/api';
+
+// Importer les composants du dashboard et de l'UI
+import AttendanceChart from '@/components/dashboard/AttendanceChart';
+import StatusPieChart from '@/components/dashboard/StatusPieChart';
+import TopLateEmployees from '@/components/dashboard/TopLateEmployees';
+import AnimatedCounter from '@/components/dashboard/AnimatedCounter';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Définir les types de données pour la clarté
+type KpiData = {
+  attendance_rate: number;
+  overtime_hours_month: number;
+  late_alerts_week: number;
+};
+
+export default function HomePage() {
+  const [kpiData, setKpiData] = useState<KpiData | null>(null);
+  const [summaryData, setSummaryData] = useState([]);
+  const [statusData, setStatusData] = useState([]);
+  const [topLate, setTopLate] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Exécuter tous les appels API en parallèle pour plus d'efficacité
+        const [kpiRes, summaryRes, statusRes] = await Promise.all([
+          api.get('/dashboard/kpis'),
+          api.get('/dashboard/summary-last-7-days'),
+          api.get('/dashboard/status-distribution')
+        ]);
+        setKpiData(kpiRes.data.kpis);
+        setTopLate(kpiRes.data.top_late_employees);
+        setSummaryData(summaryRes.data);
+        setStatusData(statusRes.data);
+      } catch (error) { 
+        console.error("Failed to fetch dashboard data", error);
+      } finally { 
+        setIsLoading(false); 
+      }
+    };
+    fetchData();
+  }, []);
+  
+  const kpiCards = [
+    { title: "Taux de Présence", value: kpiData?.attendance_rate, suffix: "%", icon: Users },
+    { title: "Heures Supp. (Mois)", value: kpiData?.overtime_hours_month, suffix: "h", icon: Clock },
+    { title: "Alertes de Retard (Semaine)", value: kpiData?.late_alerts_week, suffix: "", icon: AlertTriangle },
+  ];
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="p-4 md:p-8 h-full">
+      <motion.h1 
+        className="text-3xl md:text-4xl font-bold text-white mb-8"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Tableau de Bord
+      </motion.h1>
+      
+      {/* Section des Cartes KPI */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {isLoading ? (
+          // Skeletons de chargement pour les cartes KPI
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="bg-glass-dark border-white/10 backdrop-blur-xl text-white">
+              <CardHeader><Skeleton className="h-5 w-3/4" /></CardHeader>
+              <CardContent><Skeleton className="h-8 w-1/2" /></CardContent>
+            </Card>
+          ))
+        ) : (
+          // Vraies cartes KPI avec données
+          kpiCards.map((card, i) => (
+            <Card key={i} className="bg-glass-dark border-white/10 backdrop-blur-xl text-white">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                <card.icon className="h-4 w-4 text-slate-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {card.value !== undefined ? <AnimatedCounter value={card.value} /> : '0'}
+                  {card.suffix}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Section des Graphiques et Widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="bg-glass-dark border-white/10 backdrop-blur-xl text-white">
+            <CardHeader><CardTitle>Présence (7 derniers jours)</CardTitle></CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-[300px] w-full" /> : <AttendanceChart data={summaryData} />}
+            </CardContent>
+          </Card>
+          <Card className="bg-glass-dark border-white/10 backdrop-blur-xl text-white">
+            <CardHeader><CardTitle>Répartition des Statuts</CardTitle></CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-[300px] w-full" /> : <StatusPieChart data={statusData} />}
+            </CardContent>
+          </Card>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div className="lg:col-span-1">
+          {isLoading ? <Skeleton className="h-full w-full" /> : <TopLateEmployees employees={topLate} />}
+        </div>
+      </div>
     </div>
   );
 }
