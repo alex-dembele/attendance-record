@@ -11,6 +11,8 @@ def send_email(to: str, subject: str, html_content: str):
     msg['Subject'] = subject
     msg.attach(MIMEText(html_content, 'html'))
 
+    # Connexion sécurisée au serveur SMTP
     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-        # server.login(settings.SMTP_USER, settings.SMTP_PASSWORD) # Si authentification nécessaire
+        server.starttls()  # Activer la sécurité TLS
+        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.send_message(msg)

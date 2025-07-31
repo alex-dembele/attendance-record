@@ -13,6 +13,9 @@ from app.schemas.work_session import WorkSessionReport
 from app.services import attendance_service
 from app.tasks.attendance_tasks import process_attendance_file
 from app.schemas.import_history import ImportHistoryItem
+import io
+import csv
+from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -108,3 +111,31 @@ def get_imports_history(
 
     history = attendance_service.get_import_history(db=db, skip=skip, limit=limit)
     return history
+
+@router.get("/reports/export")
+def export_attendance_reports(
+    start_date: datetime.date,
+    end_date: datetime.date,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    if current_user.role.name not in ["ADMIN", "RH"]:
+        raise HTTPException(status_code=403, detail="Accès non autorisé.")
+
+    sessions = attendance_service.get_work_sessions(db, start_date=start_date, end_date=end_date, limit=10000) # Limite haute pour l'export
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Écrire l'en-tête
+    writer.writerow(["Date", "Matricule", "Prénom", "Nom", "Statut", "Arrivée", "Départ", "Heures Travaillées (h)"])
+
+    # Écrire les données
+    for s in sessions:
+        writer.writerow([
+            s.session_date, s.employee.employee_id, s.employee.first_name, s.employee.last_name,
+            s.status, s.check_in, s.check_out, round(s.worked_hours_seconds / 3600, 2)
+        ])
+
+    output.seek(0)
+    return StreamingResponse(output, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=rapport_presence_{start_date}_au_{end_date}.csv"})
